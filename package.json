@@ -1,0 +1,42 @@
+{
+  "name": "api-superheroes",
+  "version": "1.0.0",
+  "description": "API REST completa para gestionar superhéroes y sus mascotas fantásticas con sistema de adopción única y documentación Swagger",
+  "main": "app.js",
+  "type": "module",
+  "scripts": {
+    "start": "node app.js",
+    "dev": "node app.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "api",
+    "superheroes",
+    "pets",
+    "express",
+    "swagger",
+    "rest",
+    "nodejs",
+    "javascript"
+  ],
+  "author": "javerage",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tu-usuario/api-superheroes.git"
+  },
+  "bugs": {
+    "url": "https://github.com/tu-usuario/api-superheroes/issues"
+  },
+  "homepage": "https://github.com/tu-usuario/api-superheroes#readme",
+  "dependencies": {
+    "express": "^5.1.0",
+    "express-validator": "^7.2.1",
+    "fs-extra": "^11.3.0",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}

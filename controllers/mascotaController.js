@@ -455,12 +455,35 @@ router.post('/mascotas/:id/adoptar', authMiddleware, async (req, res) => {
   res.json({ mascota })
 })
 
-// Ver todas las mascotas adoptadas
+/**
+ * @swagger
+ * /api/mascotas/adoptadas:
+ *   get:
+ *     summary: Obtener todas las mascotas adoptadas
+ *     tags: [Mascotas]
+ *     security:
+ *       - bearer: []
+ *     responses:
+ *       200:
+ *         description: Lista de mascotas adoptadas
+ */
 router.get('/mascotas/adoptadas', authMiddleware, async (req, res) => {
   const mascotas = await Mascota.find({ adoptadaPor: { $ne: null } });
   res.json(mascotas);
 });
-// Ver solo las mascotas adoptadas por el usuario autenticado
+
+/**
+ * @swagger
+ * /api/mascotas/mis-adoptadas:
+ *   get:
+ *     summary: Obtener las mascotas adoptadas por el usuario autenticado
+ *     tags: [Mascotas]
+ *     security:
+ *       - bearer: []
+ *     responses:
+ *       200:
+ *         description: Lista de mascotas adoptadas por el usuario
+ */
 router.get('/mascotas/mis-adoptadas', authMiddleware, async (req, res) => {
   const mascotas = await Mascota.find({ adoptadaPor: req.usuario._id.toString() });
   res.json(mascotas);

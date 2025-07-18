@@ -1,26 +1,11 @@
-import fs from 'fs';
-import path from 'path';
+import mongoose from 'mongoose';
 
-const usuariosFilePath = path.join(path.resolve(), 'data/usuarios.json');
+const UsuarioSchema = new mongoose.Schema({
+  nombre: { type: String, required: true },
+  email: { type: String, required: true, unique: true },
+  passwordHash: { type: String, required: true },
+  mascotasAdoptadas: { type: [Number], default: [] }
+});
 
-class Usuario {
-  constructor(id, nombre, email, passwordHash, mascotasAdoptadas = []) {
-    this.id = id;
-    this.nombre = nombre;
-    this.email = email;
-    this.passwordHash = passwordHash;
-    this.mascotasAdoptadas = mascotasAdoptadas;
-  }
-
-  static getAll() {
-    if (!fs.existsSync(usuariosFilePath)) return [];
-    const data = fs.readFileSync(usuariosFilePath);
-    return JSON.parse(data);
-  }
-
-  static saveAll(usuarios) {
-    fs.writeFileSync(usuariosFilePath, JSON.stringify(usuarios, null, 2));
-  }
-}
-
+const Usuario = mongoose.model('Usuario', UsuarioSchema);
 export default Usuario; 

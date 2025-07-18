@@ -2,7 +2,7 @@ import Usuario from '../models/Usuario.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
-const SECRET = 'supersecreto'; // Cambia esto en producción
+const SECRET = process.env.JWT_SECRET || 'supersecreto'; // Usa variable de entorno si está disponible
 
 /**
  * @swagger
@@ -29,25 +29,18 @@ const SECRET = 'supersecreto'; // Cambia esto en producción
  *       400:
  *         description: Faltan campos o email ya registrado
  */
-export const registro = (req, res) => {
+export const registro = async (req, res) => {
   const { nombre, email, password } = req.body;
   if (!nombre || !email || !password) {
     return res.status(400).json({ mensaje: 'Faltan campos obligatorios' });
   }
-  const usuarios = Usuario.getAll();
-  if (usuarios.find(u => u.email === email)) {
+  const existe = await Usuario.findOne({ email });
+  if (existe) {
     return res.status(400).json({ mensaje: 'El email ya está registrado' });
   }
   const hash = bcrypt.hashSync(password, 10);
-  const nuevoUsuario = {
-    id: Date.now().toString(),
-    nombre,
-    email,
-    passwordHash: hash,
-    mascotasAdoptadas: []
-  };
-  usuarios.push(nuevoUsuario);
-  Usuario.saveAll(usuarios);
+  const nuevoUsuario = new Usuario({ nombre, email, passwordHash: hash, mascotasAdoptadas: [] });
+  await nuevoUsuario.save();
   res.status(201).json({ mensaje: 'Usuario registrado correctamente' });
 };
 
@@ -74,17 +67,16 @@ export const registro = (req, res) => {
  *       400:
  *         description: Credenciales inválidas
  */
-export const login = (req, res) => {
+export const login = async (req, res) => {
   const { email, password } = req.body;
-  const usuarios = Usuario.getAll();
-  const usuario = usuarios.find(u => u.email === email);
+  const usuario = await Usuario.findOne({ email });
   if (!usuario) {
     return res.status(400).json({ mensaje: 'Credenciales inválidas' });
   }
   if (!bcrypt.compareSync(password, usuario.passwordHash)) {
     return res.status(400).json({ mensaje: 'Credenciales inválidas' });
   }
-  const token = jwt.sign({ id: usuario.id, email: usuario.email }, SECRET, { expiresIn: '2h' });
+  const token = jwt.sign({ id: usuario._id, email: usuario.email }, SECRET, { expiresIn: '2h' });
   res.json({ token });
 };
 
@@ -102,10 +94,10 @@ export const login = (req, res) => {
  *       401:
  *         description: Token inválido o no enviado
  */
-export const perfil = (req, res) => {
+export const perfil = async (req, res) => {
   const usuario = req.usuario;
   res.json({
-    id: usuario.id,
+    id: usuario._id,
     nombre: usuario.nombre,
     email: usuario.email,
     mascotasAdoptadas: usuario.mascotasAdoptadas
@@ -122,20 +114,19 @@ export const perfil = (req, res) => {
  *       200:
  *         description: Ranking de usuarios
  */
-export const ranking = (req, res) => {
-  const usuarios = Usuario.getAll();
+export const ranking = async (req, res) => {
+  const usuarios = await Usuario.find();
   const ranking = usuarios
     .map(u => ({ nombre: u.nombre, cantidad: u.mascotasAdoptadas.length }))
     .sort((a, b) => b.cantidad - a.cantidad);
   res.json(ranking);
 };
 
-export const authMiddleware = (req, res, next) => {
+export const authMiddleware = async (req, res, next) => {
   let token = null;
   const auth = req.headers['authorization'];
 
   if (auth) {
-    // Permitir 'Bearer <token>' o solo '<token>'
     if (auth.toLowerCase().startsWith('bearer ')) {
       token = auth.slice(7).trim();
     } else {
@@ -149,8 +140,7 @@ export const authMiddleware = (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, SECRET);
-    const usuarios = Usuario.getAll();
-    const usuario = usuarios.find(u => u.id === decoded.id);
+    const usuario = await Usuario.findById(decoded.id);
     if (!usuario) return res.status(401).json({ mensaje: 'Usuario no encontrado' });
     req.usuario = usuario;
     next();

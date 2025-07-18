@@ -21,6 +21,9 @@ const swaggerDefinition = {
   },
   servers: [
     {
+      url: 'https://superheroes-rxcu.onrender.com',
+    },
+    {
       url: 'http://localhost:3001',
     },
   ],

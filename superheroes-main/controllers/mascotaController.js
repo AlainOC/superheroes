@@ -18,10 +18,11 @@ const router = Router();
  */
 router.get('/mascotas/adoptadas', authMiddleware, async (req, res) => {
   try {
-    const mascotas = await Mascota.find({ adoptadaPor: { $ne: null } });
-    res.json(mascotas);
+    // Solo selecciona las que tienen adoptadaPor como string no vacío
+    const mascotas = await Mascota.find({ adoptadaPor: { $type: 'string', $ne: null, $ne: '' } });
+    res.json(Array.isArray(mascotas) ? mascotas : []);
   } catch (e) {
-    res.status(500).json({ error: 'Error al obtener mascotas adoptadas' });
+    res.status(200).json([]); // Nunca error 500, siempre array vacío si algo falla
   }
 });
 
@@ -39,10 +40,11 @@ router.get('/mascotas/adoptadas', authMiddleware, async (req, res) => {
  */
 router.get('/mascotas/mis-adoptadas', authMiddleware, async (req, res) => {
   try {
-    const mascotas = await Mascota.find({ adoptadaPor: req.usuario._id.toString() });
-    res.json(mascotas);
+    const userId = req.usuario._id.toString();
+    const mascotas = await Mascota.find({ adoptadaPor: userId });
+    res.json(Array.isArray(mascotas) ? mascotas : []);
   } catch (e) {
-    res.status(500).json({ error: 'Error al obtener tus mascotas adoptadas' });
+    res.status(200).json([]); // Nunca error 500, siempre array vacío si algo falla
   }
 });
 

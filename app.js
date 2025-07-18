@@ -4,6 +4,7 @@ import swaggerUi from 'swagger-ui-express'
 import heroController from './controllers/heroController.js'
 import mascotaController from './controllers/mascotaController.js'
 import itemController from './controllers/itemController.js'
+import adopcionController from './controllers/adopcionController.js'
 import mongoose from 'mongoose'
 import { registro, login, perfil, ranking, authMiddleware } from './controllers/usuarioController.js'
 import cors from 'cors'
@@ -66,6 +67,7 @@ mongoose.connect(mongoUrl, {
 app.use('/api', heroController)
 app.use('/api', mascotaController)
 app.use('/api', itemController)
+app.use('/api', adopcionController)
 app.post('/api/usuarios/registro', registro);
 app.post('/api/usuarios/login', login);
 app.get('/api/usuarios/perfil', authMiddleware, perfil);

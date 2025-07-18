@@ -47,17 +47,17 @@ export const deleteMascota = async id => {
 }
 
 export const alimentarMascota = async id => {
-  const mascota = await Mascota.findById(id)
-  if (!mascota) return null
+  const mascota = await Mascota.findOne({ id: Number(id) });
+  if (!mascota) return null;
   if (mascota.felicidad >= 100) {
-    await enfermarMascota(id)
-    await mascota.save()
-    return { mascota, mensaje: '¡La mascota ya está muy feliz! Pero se enfermó por sobrealimentación.' }
+    await enfermarMascota(id);
+    await mascota.save();
+    return { mascota, mensaje: '¡La mascota ya está muy feliz! Pero se enfermó por sobrealimentación.' };
   }
-  mascota.felicidad = Math.min(mascota.felicidad + 10, 100)
-  mascota.vida = Math.min(mascota.vida + 5, 100)
-  await mascota.save()
-  return { mascota, mensaje: 'Mascota alimentada y más feliz.' }
+  mascota.felicidad = Math.min(mascota.felicidad + 10, 100);
+  mascota.vida = Math.min(mascota.vida + 5, 100);
+  await mascota.save();
+  return { mascota, mensaje: 'Mascota alimentada y más feliz.' };
 }
 
 export const pasearMascota = async id => {

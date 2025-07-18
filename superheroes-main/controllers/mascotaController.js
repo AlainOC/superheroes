@@ -6,50 +6,6 @@ const router = Router();
 
 /**
  * @swagger
- * /api/mascotas/adoptadas:
- *   get:
- *     summary: Obtener todas las mascotas adoptadas
- *     tags: [Mascotas]
- *     security:
- *       - bearer: []
- *     responses:
- *       200:
- *         description: Lista de mascotas adoptadas
- */
-router.get('/mascotas/adoptadas', authMiddleware, async (req, res) => {
-  try {
-    // Solo selecciona las que tienen adoptadaPor como string no vacío
-    const mascotas = await Mascota.find({ adoptadaPor: { $type: 'string', $ne: null, $ne: '' } });
-    res.json(Array.isArray(mascotas) ? mascotas : []);
-  } catch (e) {
-    res.status(200).json([]); // Nunca error 500, siempre array vacío si algo falla
-  }
-});
-
-/**
- * @swagger
- * /api/mascotas/mis-adoptadas:
- *   get:
- *     summary: Obtener las mascotas adoptadas por el usuario autenticado
- *     tags: [Mascotas]
- *     security:
- *       - bearer: []
- *     responses:
- *       200:
- *         description: Lista de mascotas adoptadas por el usuario
- */
-router.get('/mascotas/mis-adoptadas', authMiddleware, async (req, res) => {
-  try {
-    const userId = req.usuario._id.toString();
-    const mascotas = await Mascota.find({ adoptadaPor: userId });
-    res.json(Array.isArray(mascotas) ? mascotas : []);
-  } catch (e) {
-    res.status(200).json([]); // Nunca error 500, siempre array vacío si algo falla
-  }
-});
-
-/**
- * @swagger
  * /api/mascotas/{id}/adoptar:
  *   post:
  *     summary: Adoptar una mascota (usuario autenticado)

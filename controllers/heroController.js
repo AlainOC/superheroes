@@ -6,7 +6,10 @@ import {
   updateHero,
   deleteHero
 } from '../services/heroService.js'
-import { getMascotaById } from '../services/mascotaService.js'
+import { getMascotaById, updateMascota } from '../services/mascotaService.js'
+import Hero from '../models/Hero.js'
+import mongoose from 'mongoose'
+import { authMiddleware } from './usuarioController.js'
 const router = Router()
 
 /**
@@ -26,8 +29,10 @@ const router = Router()
  *       200:
  *         description: Lista de superhéroes
  */
-router.get('/heroes', (req, res) => {
-  res.json(getAllHeroes())
+// Obtener todos los héroes
+router.get('/heroes', authMiddleware, async (req, res) => {
+  const heroes = await getAllHeroes()
+  res.json(heroes)
 })
 
 /**
@@ -49,9 +54,11 @@ router.get('/heroes', (req, res) => {
  *       404:
  *         description: Superhéroe no encontrado
  */
-router.get('/heroes/:id', (req, res) => {
-  const hero = getHeroById(parseInt(req.params.id))
-  if (!hero) return res.status(404).json({ error: 'No encontrado' })
+// Obtener un héroe por ID
+router.get('/heroes/:id', authMiddleware, async (req, res) => {
+  const { id } = req.params;
+  const hero = await getHeroById(id)
+  if (!hero) return res.status(404).json({ error: 'Héroe no encontrado' })
   res.json(hero)
 })
 
@@ -74,10 +81,11 @@ router.get('/heroes/:id', (req, res) => {
  *       201:
  *         description: Superhéroe creado
  */
-router.post('/heroes', (req, res) => {
-  const { nombre } = req.body
+// Crear nuevo héroe
+router.post('/heroes', authMiddleware, async (req, res) => {
+  const { nombre, alias, city, team } = req.body
   if (!nombre) return res.status(400).json({ error: 'Nombre requerido' })
-  const nuevo = createHero(nombre)
+  const nuevo = await createHero(nombre, alias, city, team)
   res.status(201).json(nuevo)
 })
 
@@ -109,10 +117,11 @@ router.post('/heroes', (req, res) => {
  *       404:
  *         description: Superhéroe no encontrado
  */
-router.put('/heroes/:id', (req, res) => {
-  const { nombre } = req.body
-  const hero = updateHero(parseInt(req.params.id), nombre)
-  if (!hero) return res.status(404).json({ error: 'No encontrado' })
+// Actualizar héroe
+router.put('/heroes/:id', authMiddleware, async (req, res) => {
+  const { nombre, alias, city, team } = req.body
+  const hero = await updateHero(req.params.id, nombre, alias, city, team)
+  if (!hero) return res.status(404).json({ error: 'Superhéroe no encontrado' })
   res.json(hero)
 })
 
@@ -135,9 +144,10 @@ router.put('/heroes/:id', (req, res) => {
  *       404:
  *         description: Superhéroe no encontrado
  */
-router.delete('/heroes/:id', (req, res) => {
-  const ok = deleteHero(parseInt(req.params.id))
-  if (!ok) return res.status(404).json({ error: 'No encontrado' })
+// Eliminar héroe
+router.delete('/heroes/:id', authMiddleware, async (req, res) => {
+  const ok = await deleteHero(req.params.id)
+  if (!ok) return res.status(404).json({ error: 'Superhéroe no encontrado' })
   res.status(204).send()
 })
 
@@ -171,14 +181,17 @@ router.delete('/heroes/:id', (req, res) => {
  *       400:
  *         description: Mascota ya adoptada
  */
-router.post('/heroes/:id/adoptar', (req, res) => {
-  const hero = getHeroById(parseInt(req.params.id))
+// Adoptar mascota
+router.post('/heroes/:id/adoptar', authMiddleware, async (req, res) => {
+  const { id } = req.params;
+  const hero = await getHeroById(id)
   if (!hero) return res.status(404).json({ error: 'Superhéroe no encontrado' })
   const { mascotaId } = req.body
-  const mascota = getMascotaById(mascotaId)
+  const mascota = await getMascotaById(mascotaId)
   if (!mascota) return res.status(404).json({ error: 'Mascota no encontrada' })
   if (mascota.heroe) return res.status(400).json({ error: 'Mascota ya adoptada' })
   mascota.heroe = hero.nombre || hero.name || hero.alias
+  await mascota.save()
   res.json({ heroe: hero, mascota })
 })
 
@@ -212,15 +225,82 @@ router.post('/heroes/:id/adoptar', (req, res) => {
  *       400:
  *         description: Esta mascota no pertenece a este héroe
  */
-router.post('/heroes/:id/abandonar', (req, res) => {
-  const hero = getHeroById(parseInt(req.params.id))
+// Abandonar mascota
+router.post('/heroes/:id/abandonar', authMiddleware, async (req, res) => {
+  const { id } = req.params;
+  const hero = await getHeroById(id)
   if (!hero) return res.status(404).json({ error: 'Superhéroe no encontrado' })
   const { mascotaId } = req.body
-  const mascota = getMascotaById(mascotaId)
+  const mascota = await getMascotaById(mascotaId)
   if (!mascota) return res.status(404).json({ error: 'Mascota no encontrada' })
   if (mascota.heroe !== (hero.nombre || hero.name || hero.alias)) return res.status(400).json({ error: 'Esta mascota no pertenece a este héroe' })
   mascota.heroe = null
+  await mascota.save()
   res.json({ heroe: hero, mascota })
 })
+
+// Endpoint para poblar la base de datos con 10 héroes de ejemplo
+router.post('/heroes/poblar', async (req, res) => {
+  const heroesBase = [
+    { nombre: 'Clark Kent', alias: 'Superman', city: 'Metrópolis', team: 'Liga de la Justicia' },
+    { nombre: 'Tony Stark', alias: 'Iron Man', city: 'Nueva York', team: 'Los Vengadores' },
+    { nombre: 'Bruce Wayne', alias: 'Batman', city: 'Gotham City', team: 'Liga de la Justicia' },
+    { nombre: 'Steve Rogers', alias: 'Capitán América', city: 'Nueva York', team: 'Los Vengadores' },
+    { nombre: 'Diana Prince', alias: 'Mujer Maravilla', city: 'Themyscira', team: 'Liga de la Justicia' },
+    { nombre: 'Peter Parker', alias: 'Spider-Man', city: 'Nueva York', team: 'Ninguno' },
+    { nombre: 'Barry Allen', alias: 'Flash', city: 'Central City', team: 'Liga de la Justicia' },
+    { nombre: 'Natasha Romanoff', alias: 'Viuda Negra', city: 'Moscú', team: 'Los Vengadores' },
+    { nombre: 'Hal Jordan', alias: 'Linterna Verde', city: 'Coast City', team: 'Liga de la Justicia' },
+    { nombre: 'Wanda Maximoff', alias: 'Bruja Escarlata', city: 'Transia', team: 'Los Vengadores' }
+  ]
+  const existentes = await Hero.countDocuments()
+  if (existentes >= 10) {
+    return res.json({ mensaje: 'Ya existen héroes en la base de datos.' })
+  }
+  await Hero.insertMany(heroesBase)
+  res.json({ mensaje: 'Héroes de ejemplo insertados.' })
+})
+
+// Endpoint para poblar la base de datos con 30 héroes personalizados
+router.post('/heroes/poblar30', async (req, res) => {
+  const heroesBase = [
+    { nombre: 'Clark Kent', alias: 'Superman', city: 'Metrópolis', team: 'Liga de la Justicia' },
+    { nombre: 'Tony Stark', alias: 'Iron Man', city: 'Nueva York', team: 'Los Vengadores' },
+    { nombre: 'Bruce Wayne', alias: 'Batman', city: 'Gotham City', team: 'Liga de la Justicia' },
+    { nombre: 'Steve Rogers', alias: 'Capitán América', city: 'Nueva York', team: 'Los Vengadores' },
+    { nombre: 'Diana Prince', alias: 'Mujer Maravilla', city: 'Themyscira', team: 'Liga de la Justicia' },
+    { nombre: 'Thor Odinson', alias: 'Thor', city: 'Asgard', team: 'Los Vengadores' },
+    { nombre: 'Barry Allen', alias: 'Flash', city: 'Central City', team: 'Liga de la Justicia' },
+    { nombre: 'Bruce Banner', alias: 'Hulk', city: 'Dayton', team: 'Los Vengadores' },
+    { nombre: 'Arthur Curry', alias: 'Aquaman', city: 'Atlantis', team: 'Liga de la Justicia' },
+    { nombre: 'Peter Parker', alias: 'Spider-Man', city: 'Nueva York', team: 'Ninguno' },
+    { nombre: 'Hal Jordan', alias: 'Linterna Verde', city: 'Coast City', team: 'Liga de la Justicia' },
+    { nombre: 'Natasha Romanoff', alias: 'Viuda Negra', city: 'Moscú', team: 'Los Vengadores' },
+    { nombre: 'Oliver Queen', alias: 'Green Arrow', city: 'Star City', team: 'Liga de la Justicia' },
+    { nombre: 'Clint Barton', alias: 'Ojo de Halcón', city: 'Waverly', team: 'Los Vengadores' },
+    { nombre: 'Victor Stone', alias: 'Cyborg', city: 'Detroit', team: 'Liga de la Justicia' },
+    { nombre: 'Stephen Vincent Strange', alias: 'Doctor Strange', city: 'Nueva York', team: 'Los Vengadores' },
+    { nombre: 'Billy Batson', alias: 'Shazam', city: 'Fawcett City', team: 'Liga de la Justicia' },
+    { nombre: "T'Challa", alias: 'Black Panther', city: 'Wakanda', team: 'Los Vengadores' },
+    { nombre: 'Kara Danvers', alias: 'Supergirl', city: 'National City', team: 'Ninguno' },
+    { nombre: 'Wanda Maximoff', alias: 'Bruja Escarlata', city: 'Transia', team: 'Los Vengadores' },
+    { nombre: 'Dick Grayson', alias: 'Nightwing', city: 'Blüdhaven', team: 'Ninguno' },
+    { nombre: 'Charles Xavier', alias: 'Profesor X', city: 'Salem Center', team: 'X-Men' },
+    { nombre: 'Barbara Gordon', alias: 'Batgirl', city: 'Gotham City', team: 'Birds of Prey' },
+    { nombre: 'James Howlett', alias: 'Wolverine', city: 'Canadá', team: 'X-Men' },
+    { nombre: "J'onn J'onzz", alias: 'Detective Marciano', city: 'Ninguna', team: 'Liga de la Justicia' },
+    { nombre: 'Ororo Munroe', alias: 'Tormenta', city: 'El Cairo', team: 'X-Men' },
+    { nombre: 'Kate Kane', alias: 'Batwoman', city: 'Gotham City', team: 'Ninguno' },
+    { nombre: 'Scott Summers', alias: 'Cíclope', city: 'Anchorage', team: 'X-Men' },
+    { nombre: 'Kyle Rayner', alias: 'Linterna Verde', city: 'Los Ángeles', team: 'Liga de la Justicia' },
+    { nombre: 'Jean Grey', alias: 'Fénix', city: 'Annandale-on-Hudson', team: 'X-Men' }
+  ];
+  const existentes = await Hero.countDocuments();
+  if (existentes >= 30) {
+    return res.json({ mensaje: 'Ya existen 30 o más héroes en la base de datos.' });
+  }
+  await Hero.insertMany(heroesBase);
+  res.json({ mensaje: '30 héroes insertados.' });
+});
 
 export default router 

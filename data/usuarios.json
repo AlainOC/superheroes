@@ -1,0 +1,16 @@
+[
+  {
+    "id": "1752863573853",
+    "nombre": "alain",
+    "email": "alain@gmal.com",
+    "passwordHash": "$2b$10$37wOTPlRpvhq7S3o.fYC7u9fk0jUXu0.61jxTltyWGhPtwbXGhvQ.",
+    "mascotasAdoptadas": []
+  },
+  {
+    "id": "1752865687010",
+    "nombre": "string",
+    "email": "string",
+    "passwordHash": "$2b$10$gSv23j6a58ExzDzd6jzVQuPMcxkYNH9fQsNIOnCj14OTTwNQzulzy",
+    "mascotasAdoptadas": []
+  }
+]

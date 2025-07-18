@@ -133,7 +133,11 @@ export const ranking = (req, res) => {
 export const authMiddleware = (req, res, next) => {
   const auth = req.headers['authorization'];
   if (!auth) return res.status(401).json({ mensaje: 'Token requerido' });
-  const token = auth.split(' ')[1];
+  // Permitir 'Bearer <token>' o solo '<token>'
+  let token = auth;
+  if (auth.toLowerCase().startsWith('bearer ')) {
+    token = auth.split(' ')[1];
+  }
   try {
     const decoded = jwt.verify(token, SECRET);
     const usuarios = Usuario.getAll();

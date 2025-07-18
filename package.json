@@ -30,6 +30,7 @@
   },
   "homepage": "https://github.com/tu-usuario/api-superheroes#readme",
   "dependencies": {
+    "bcryptjs": "^3.0.2",
     "express": "^5.1.0",
     "express-validator": "^7.2.1",
     "fs-extra": "^11.3.0",

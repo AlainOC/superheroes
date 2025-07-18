@@ -131,13 +131,22 @@ export const ranking = (req, res) => {
 };
 
 export const authMiddleware = (req, res, next) => {
+  let token = null;
   const auth = req.headers['authorization'];
-  if (!auth) return res.status(401).json({ mensaje: 'Token requerido' });
-  // Permitir 'Bearer <token>' o solo '<token>'
-  let token = auth;
-  if (auth.toLowerCase().startsWith('bearer ')) {
-    token = auth.split(' ')[1];
+
+  if (auth) {
+    // Permitir 'Bearer <token>' o solo '<token>'
+    if (auth.toLowerCase().startsWith('bearer ')) {
+      token = auth.slice(7).trim();
+    } else {
+      token = auth.trim();
+    }
   }
+
+  if (!token) {
+    return res.status(401).json({ mensaje: 'Token requerido en el header Authorization' });
+  }
+
   try {
     const decoded = jwt.verify(token, SECRET);
     const usuarios = Usuario.getAll();

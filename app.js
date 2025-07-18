@@ -6,8 +6,10 @@ import mascotaController from './controllers/mascotaController.js'
 import itemController from './controllers/itemController.js'
 import mongoose from 'mongoose'
 import { registro, login, perfil, ranking, authMiddleware } from './controllers/usuarioController.js'
+import cors from 'cors'
 
 const app = express()
+app.use(cors())
 
 // Swagger configuration
 const swaggerDefinition = {

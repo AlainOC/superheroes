@@ -1,0 +1,738 @@
+{
+  "info": {
+    "_postman_id": "superheroes-api-collection-001",
+    "name": "Superheroes API (Render)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "exec": [
+          "const random = Math.floor(Math.random() * 1000000);",
+          "pm.environment.set('email', `testuser${random}@mail.com`);",
+          "pm.environment.set('password', `TestPass${random}`);"
+        ],
+        "type": "text/javascript"
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Generar usuario aleatorio",
+      "item": [
+        {
+          "name": "Registro de usuario",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "https://superheroes-rxcu.onrender.com/api/usuarios/registro",
+              "protocol": "https",
+              "host": ["superheroes-rxcu","onrender","com"],
+              "path": ["api","usuarios","registro"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Test User\",\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Registro exitoso', function () { pm.expect([200,201]).to.include(pm.response.code); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Login de usuario (con retry)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "https://superheroes-rxcu.onrender.com/api/usuarios/login",
+              "protocol": "https",
+              "host": ["superheroes-rxcu","onrender","com"],
+              "path": ["api","usuarios","login"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const maxRetries = 5;",
+                  "let retry = parseInt(pm.environment.get('loginRetry') || '0', 10);",
+                  "if (pm.response.code === 200 && pm.response.json().token) {",
+                  "  pm.environment.set('token', pm.response.json().token);",
+                  "  pm.environment.unset('loginRetry');",
+                  "  pm.test('Login exitoso', function () { pm.response.to.have.status(200); });",
+                  "} else if (retry < maxRetries) {",
+                  "  retry++;",
+                  "  pm.environment.set('loginRetry', retry);",
+                  "  setTimeout(function() { postman.setNextRequest('Login de usuario (con retry)'); }, 1000);",
+                  "  pm.test('Reintentando login (' + retry + '/' + maxRetries + ')', function () { pm.expect(true).to.be.true; });",
+                  "} else {",
+                  "  pm.environment.unset('loginRetry');",
+                  "  pm.test('Login fallido tras reintentos', function () { pm.expect.fail('No se pudo hacer login tras ' + maxRetries + ' intentos. Última respuesta: ' + pm.response.text()); });",
+                  "  postman.setNextRequest(null); // aborta la colección",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Héroes",
+      "item": [
+        {
+          "name": "Listar héroes",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "https://superheroes-rxcu.onrender.com/api/heroes",
+              "protocol": "https",
+              "host": ["superheroes-rxcu","onrender","com"],
+              "path": ["api","heroes"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "var heroes = pm.response.json(); if (heroes.length > 0) pm.environment.set('heroeId', heroes[0].id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Crear héroe",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "https://superheroes-rxcu.onrender.com/api/heroes",
+              "protocol": "https",
+              "host": ["superheroes-rxcu","onrender","com"],
+              "path": ["api","heroes"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Hero Test\",\n  \"alias\": \"Alias Test\",\n  \"city\": \"Ciudad Test\",\n  \"team\": \"Equipo Test\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 o 201', function () { pm.expect([200,201]).to.include(pm.response.code); });",
+                  "var hero = pm.response.json(); if (hero.id) pm.environment.set('heroeId', hero.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Obtener héroe",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "https://superheroes-rxcu.onrender.com/api/heroes/{{heroeId}}",
+              "protocol": "https",
+              "host": ["superheroes-rxcu","onrender","com"],
+              "path": ["api","heroes","{{heroeId}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Actualizar héroe",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "https://superheroes-rxcu.onrender.com/api/heroes/{{heroeId}}",
+              "protocol": "https",
+              "host": ["superheroes-rxcu","onrender","com"],
+              "path": ["api","heroes","{{heroeId}}"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Hero Actualizado\",\n  \"alias\": \"Alias Actualizado\",\n  \"city\": \"Ciudad Actualizada\",\n  \"team\": \"Equipo Actualizado\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Eliminar héroe",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "https://superheroes-rxcu.onrender.com/api/heroes/{{heroeId}}",
+              "protocol": "https",
+              "host": ["superheroes-rxcu","onrender","com"],
+              "path": ["api","heroes","{{heroeId}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Mascotas",
+      "item": [
+        {
+          "name": "Listar mascotas",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "https://superheroes-rxcu.onrender.com/api/mascotas",
+              "protocol": "https",
+              "host": ["superheroes-rxcu","onrender","com"],
+              "path": ["api","mascotas"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "var mascotas = pm.response.json(); if (mascotas.length > 0) pm.environment.set('mascotaId', mascotas[0].id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Crear mascota",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "https://superheroes-rxcu.onrender.com/api/mascotas",
+              "protocol": "https",
+              "host": ["superheroes-rxcu","onrender","com"],
+              "path": ["api","mascotas"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Mascota Test\",\n  \"heroe\": null\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 o 201', function () { pm.expect([200,201]).to.include(pm.response.code); });",
+                  "var mascota = pm.response.json(); if (mascota.id) pm.environment.set('mascotaId', mascota.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Obtener mascota",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "https://superheroes-rxcu.onrender.com/api/mascotas/{{mascotaId}}",
+              "protocol": "https",
+              "host": ["superheroes-rxcu","onrender","com"],
+              "path": ["api","mascotas","{{mascotaId}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Actualizar mascota",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "https://superheroes-rxcu.onrender.com/api/mascotas/{{mascotaId}}",
+              "protocol": "https",
+              "host": ["superheroes-rxcu","onrender","com"],
+              "path": ["api","mascotas","{{mascotaId}}"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Mascota Actualizada\",\n  \"heroe\": null\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Eliminar mascota",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "https://superheroes-rxcu.onrender.com/api/mascotas/{{mascotaId}}",
+              "protocol": "https",
+              "host": ["superheroes-rxcu","onrender","com"],
+              "path": ["api","mascotas","{{mascotaId}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Items",
+      "item": [
+        {
+          "name": "Listar items",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "https://superheroes-rxcu.onrender.com/api/items",
+              "protocol": "https",
+              "host": ["superheroes-rxcu","onrender","com"],
+              "path": ["api","items"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "var items = pm.response.json(); if (items.length > 0) pm.environment.set('itemId', items[0].id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Crear item",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "https://superheroes-rxcu.onrender.com/api/items",
+              "protocol": "https",
+              "host": ["superheroes-rxcu","onrender","com"],
+              "path": ["api","items"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Item Test\",\n  \"tipo\": \"free\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 o 201', function () { pm.expect([200,201]).to.include(pm.response.code); });",
+                  "var item = pm.response.json(); if (item.id) pm.environment.set('itemId', item.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Obtener item",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "https://superheroes-rxcu.onrender.com/api/items/{{itemId}}",
+              "protocol": "https",
+              "host": ["superheroes-rxcu","onrender","com"],
+              "path": ["api","items","{{itemId}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Actualizar item",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "https://superheroes-rxcu.onrender.com/api/items/{{itemId}}",
+              "protocol": "https",
+              "host": ["superheroes-rxcu","onrender","com"],
+              "path": ["api","items","{{itemId}}"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Item Actualizado\",\n  \"tipo\": \"pay\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Eliminar item",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "https://superheroes-rxcu.onrender.com/api/items/{{itemId}}",
+              "protocol": "https",
+              "host": ["superheroes-rxcu","onrender","com"],
+              "path": ["api","items","{{itemId}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Adopción",
+      "item": [
+        {
+          "name": "Mascotas disponibles",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "https://superheroes-rxcu.onrender.com/api/adopcion/disponibles",
+              "protocol": "https",
+              "host": ["superheroes-rxcu","onrender","com"],
+              "path": ["api","adopcion","disponibles"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "var mascotas = pm.response.json(); if (mascotas.length > 0) pm.environment.set('mascotaId', mascotas[0].id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Adoptar mascota",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "https://superheroes-rxcu.onrender.com/api/adopcion/adoptar/{{mascotaId}}",
+              "protocol": "https",
+              "host": ["superheroes-rxcu","onrender","com"],
+              "path": ["api","adopcion","adoptar","{{mascotaId}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 o 400', function () { pm.expect([200,400]).to.include(pm.response.code); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Mascotas adoptadas",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "https://superheroes-rxcu.onrender.com/api/adopcion/adoptadas",
+              "protocol": "https",
+              "host": ["superheroes-rxcu","onrender","com"],
+              "path": ["api","adopcion","adoptadas"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Mis mascotas adoptadas",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "https://superheroes-rxcu.onrender.com/api/adopcion/mis-mascotas",
+              "protocol": "https",
+              "host": ["superheroes-rxcu","onrender","com"],
+              "path": ["api","adopcion","mis-mascotas"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Abandonar mascota",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "https://superheroes-rxcu.onrender.com/api/adopcion/abandonar/{{mascotaId}}",
+              "protocol": "https",
+              "host": ["superheroes-rxcu","onrender","com"],
+              "path": ["api","adopcion","abandonar","{{mascotaId}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 o 400', function () { pm.expect([200,400]).to.include(pm.response.code); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Estadísticas de adopción",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "https://superheroes-rxcu.onrender.com/api/adopcion/estadisticas",
+              "protocol": "https",
+              "host": ["superheroes-rxcu","onrender","com"],
+              "path": ["api","adopcion","estadisticas"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    { "key": "email", "value": "" },
+    { "key": "password", "value": "" },
+    { "key": "token", "value": "" },
+    { "key": "heroeId", "value": "" },
+    { "key": "mascotaId", "value": "" },
+    { "key": "itemId", "value": "" }
+  ]
+} 
